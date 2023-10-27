@@ -29,6 +29,7 @@ class ModelComparison(ABC):
         self.logger = logging.getLogger('ModelComparison')
         self.model1 = model1
         self.model2 = model2
+        self.model3 = model2
 
     @abstractmethod
     def compare(self):
