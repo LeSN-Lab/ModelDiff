@@ -1,5 +1,6 @@
 import jax
 import numpy as np
+import jax.numpy as jnp
 from scipy.spatial import distance
 from transformers import FlaxBertForSequenceClassification, BertTokenizer
 
@@ -82,13 +83,44 @@ def compute_similarity_with_ddv(model1, model2, profiling_inputs):
 
     return model_similarity
 
-# Example usage
+# Example
 tokenizer = BertTokenizer.from_pretrained("nlptown/bert-base-multilingual-uncased-sentiment")
-text_pairs = ["Text 1", "Text 2", "Text 3", "Text 4"]  # Replace with actual text pairs
+text_pairs = ["Text 1", "Text 2", "Text 3", "Text 4"]
 inputs = tokenizer(text_pairs, return_tensors='jax', padding=True, truncation=True)
 
 model_similarity = compute_similarity_with_ddv(model1, model2, inputs)
 print(f"Model Similarity: {model_similarity}")
 
 
+
+
+# Compute each layer's cosine_similarity
+def compute_layer_cosine_similarity(outputs1, outputs2):
+    similarities = []
+    for layer_output1, layer_output2 in zip(outputs1, outputs2):
+        # Flatten the layer outputs to compute cosine similarity
+        flat_output1 = layer_output1.reshape(layer_output1.shape[0], -1)
+        flat_output2 = layer_output2.reshape(layer_output2.shape[0], -1)
+        similarity = 1 - distance.cosine(flat_output1.mean(axis=0), flat_output2.mean(axis=0))
+        similarities.append(similarity)
+    return similarities
+
+def compute_ddv_and_layer_similarities(model1, model2, inputs):
+    outputs1 = model1(**inputs).logits
+    outputs2 = model2(**inputs).logits
+    ddv = compute_cosine_distance(outputs1.mean(axis=0), outputs2.mean(axis=0))
+    layer_similarities = compute_layer_cosine_similarity(outputs1, outputs2)
+    return ddv, layer_similarities
+
+def compute_similarity_with_ddv(model1, model2, profiling_inputs):
+    ddv, layer_similarities = compute_ddv_and_layer_similarities(model1, model2, profiling_inputs)
+    normalized_ddv = jax.nn.normalize(ddv)
+    model_similarity = 1 - normalized_ddv
+    return model_similarity, layer_similarities
+
+# Example usage
+model_similarity, layer_similarities = compute_similarity_with_ddv(model1, model2, inputs)
+print(f"Model Similarity: {model_similarity}")
+for i, similarity in enumerate(layer_similarities):
+    print(f"Layer {i} Similarity: {similarity}")
 
