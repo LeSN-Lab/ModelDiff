@@ -256,8 +256,7 @@ class ModelDiff(ModelComparison):
             feature_dists.append(dist)
             del module1.out, module2.out, feature1, feature2
         sim = np.mean(feature_dists)
-        
-                
+
         self.logger.info(f'  model similarity: {sim}')
         return sim
     
